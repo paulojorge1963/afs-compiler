@@ -3,12 +3,18 @@
 dataset per Section 9 of the spec. Model instances are built in-memory, without a
 database session, so the calc engine tests stay independent of document generation.
 """
+from datetime import date
+
 import pytest
 
 from app.models import (
+    Director,
+    Entity,
     FinancialYear,
+    IFRSEdition,
     PPEAsset,
     PolicyElection,
+    ReportType,
     ShareholderLoan,
     TaxBracket,
     TaxComputationMeta,
@@ -19,12 +25,36 @@ from app.models import (
 
 @pytest.fixture
 def example_financial_year():
+    entity = Entity(
+        company_name="Example Photography Studio (Pty) Ltd",
+        registration_number="2020/000000/07",
+        tax_reference_number="0000000000",
+        country_of_incorporation="South Africa",
+        nature_of_business="Photography",
+        registered_office_address="1 Example Street, Sample City, 0000",
+        business_address="1 Example Street, Sample City, 0000",
+        postal_address="1 Example Street, Sample City, 0000",
+        bankers="Example Bank",
+        practitioner_name="A. Practitioner",
+        practitioner_firm="Example Accounting Services CC",
+        report_type=ReportType.COMPILATION,
+        is_sbc=True,
+    )
+    entity.directors = [
+        Director(full_name="J. Sample", nationality="South African", date_appointed=date(2013, 6, 6), signs_approval=True),
+    ]
+
     fy = FinancialYear(
+        year_end_date=date(2026, 2, 28),
+        comparative_year_end_date=date(2025, 2, 28),
+        date_approved=date(2026, 9, 30),
+        ifrs_edition=IFRSEdition.SECOND_2015,
         opening_retained_income=138178,
         opening_share_capital=1000,
         opening_cash=489,
         prior_year_depreciation_charge=2079,
     )
+    fy.entity = entity
 
     tb_rows = [
         ("Rendering of services", "Revenue", 96423, 41899),
@@ -111,16 +141,31 @@ def example_financial_year():
 def minimal_financial_year():
     """No PPE, no shareholder loans, zero comparatives - tests clean omission of
     notes/statement lines that don't apply (Section 9's second acceptance test)."""
+    entity = Entity(
+        company_name="Minimal Test Co (Pty) Ltd",
+        registration_number="9999/999999/07",
+        country_of_incorporation="South Africa",
+        nature_of_business="Consulting",
+        report_type=ReportType.COMPILATION,
+        is_sbc=True,
+    )
+    entity.directors = [Director(full_name="Test Director", nationality="South African", signs_approval=True)]
+
     fy = FinancialYear(
+        year_end_date=date(2026, 12, 31),
+        comparative_year_end_date=date(2025, 12, 31),
+        date_approved=date(2027, 3, 1),
+        ifrs_edition=IFRSEdition.SECOND_2015,
         opening_retained_income=0,
         opening_share_capital=100,
         opening_cash=0,
         prior_year_depreciation_charge=0,
     )
+    fy.entity = entity
     fy.trial_balance_lines = [
         TrialBalanceLine(account_name="Consulting fees", afs_category="Revenue", current_year_amount=50000, prior_year_amount=0),
         TrialBalanceLine(account_name="Sundry expenses", afs_category="Operating Expense", current_year_amount=10000, prior_year_amount=0),
-        TrialBalanceLine(account_name="Cash and cash equivalents", afs_category="Cash and Cash Equivalents", current_year_amount=40000, prior_year_amount=0),
+        TrialBalanceLine(account_name="Cash and cash equivalents", afs_category="Cash and Cash Equivalents", current_year_amount=40100, prior_year_amount=100),
         TrialBalanceLine(account_name="Share capital", afs_category="Share Capital", current_year_amount=100, prior_year_amount=100),
     ]
     fy.ppe_assets = []
