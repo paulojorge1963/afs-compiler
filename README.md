@@ -89,3 +89,18 @@ Computation tab is a per-year, user-editable input, never a constant baked into 
 app - SARS revises the brackets annually. A new financial year's bracket table is
 pre-populated by copying the prior year's as a starting point; check SARS's current
 published rates before relying on the output.
+
+## Development workflow
+
+`main` is protected, including for the repo owner: direct pushes are rejected, and
+every change has to come in through a pull request with a passing `test` check
+(GitHub Actions, see `.github/workflows/tests.yml`).
+
+```bash
+git checkout -b my-change
+# ...edit, commit...
+git push -u origin my-change
+gh pr create --fill
+# wait for the "test" check to go green, then:
+gh pr merge --squash
+```
