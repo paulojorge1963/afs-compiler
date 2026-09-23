@@ -1,5 +1,7 @@
 # AFS Compiler
 
+[![Tests](https://github.com/paulojorge1963/afs-compiler/actions/workflows/tests.yml/badge.svg)](https://github.com/paulojorge1963/afs-compiler/actions/workflows/tests.yml)
+
 A local tool for compiling Annual Financial Statements (AFS) for small South African
 companies, in the style of a compilation-engagement AFS pack prepared under the
 **IFRS for SME's** and the **Companies Act of South Africa, 71 of 2008**.
