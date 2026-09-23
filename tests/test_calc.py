@@ -1,4 +1,4 @@
-"""Unit tests for the calculation engine (app.calc), using the Paulo Jorge Photography
+"""Unit tests for the calculation engine (app.calc), using the Example Photography Studio
 FY2026 worked example as fixtures - independent of the document generation step,
 per Section 9 of the spec.
 """
@@ -7,8 +7,8 @@ import pytest
 from app import calc
 
 
-def test_income_statement_current_year(pjp_financial_year):
-    fy = pjp_financial_year
+def test_income_statement_current_year(example_financial_year):
+    fy = example_financial_year
     ic = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="current")
 
     assert ic.revenue == 96423
@@ -22,15 +22,15 @@ def test_income_statement_current_year(pjp_financial_year):
     assert ic.profit_for_the_year == pytest.approx(23447)
 
 
-def test_income_statement_prior_year(pjp_financial_year):
-    fy = pjp_financial_year
+def test_income_statement_prior_year(example_financial_year):
+    fy = example_financial_year
     ip = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="prior")
     assert ip.depreciation == 2079
     assert ip.profit_for_the_year == pytest.approx(8180)
 
 
-def test_retained_income_roll_forward(pjp_financial_year):
-    fy = pjp_financial_year
+def test_retained_income_roll_forward(example_financial_year):
+    fy = example_financial_year
     ic = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="current")
     ip = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="prior")
 
@@ -41,8 +41,8 @@ def test_retained_income_roll_forward(pjp_financial_year):
     assert current_closing == pytest.approx(169805)
 
 
-def test_balance_sheet_ties_to_the_cent(pjp_financial_year):
-    fy = pjp_financial_year
+def test_balance_sheet_ties_to_the_cent(example_financial_year):
+    fy = example_financial_year
     ic = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="current")
     ip = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="prior")
     retained_current = calc.retained_income_closing(fy.opening_retained_income, ip.profit_for_the_year, ic.profit_for_the_year)
@@ -59,8 +59,8 @@ def test_balance_sheet_ties_to_the_cent(pjp_financial_year):
     assert bs.total_assets == pytest.approx(bs.total_equity_and_liabilities)
 
 
-def test_cash_flow_closes_to_trial_balance_cash(pjp_financial_year):
-    fy = pjp_financial_year
+def test_cash_flow_closes_to_trial_balance_cash(example_financial_year):
+    fy = example_financial_year
     ic = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="current")
     cash_prior = calc.sum_category(fy.trial_balance_lines, "Cash and Cash Equivalents", "prior")
     cash_current = calc.sum_category(fy.trial_balance_lines, "Cash and Cash Equivalents", "current")
@@ -73,8 +73,8 @@ def test_cash_flow_closes_to_trial_balance_cash(pjp_financial_year):
     assert cf.cash_at_end_of_year == pytest.approx(cash_current)
 
 
-def test_tax_computation(pjp_financial_year):
-    fy = pjp_financial_year
+def test_tax_computation(example_financial_year):
+    fy = example_financial_year
     ic = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="current")
     tax = calc.compute_tax(
         ic.profit_for_the_year, fy.tax_differences, fy.tax_computation_meta.assessed_loss_brought_forward, fy.tax_brackets
@@ -105,8 +105,8 @@ def test_tax_computation_progressive_brackets():
     assert tax.tax_thereon == pytest.approx(expected)
 
 
-def test_run_validation_all_pass(pjp_financial_year):
-    fy = pjp_financial_year
+def test_run_validation_all_pass(example_financial_year):
+    fy = example_financial_year
     ic = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="current")
     ip = calc.compute_income_statement(fy.trial_balance_lines, fy.ppe_assets, fy.prior_year_depreciation_charge, year="prior")
     retained_current = calc.retained_income_closing(fy.opening_retained_income, ip.profit_for_the_year, ic.profit_for_the_year)

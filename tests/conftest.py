@@ -1,4 +1,4 @@
-"""Test fixtures built from the Paulo Jorge Photography FY2026 worked example
+"""Test fixtures built from the Example Photography Studio FY2026 worked example
 (the same data as AFS-Compiler-Input-Template.xlsx), used as the acceptance-test
 dataset per Section 9 of the spec. Model instances are built in-memory, without a
 database session, so the calc engine tests stay independent of document generation.
@@ -18,7 +18,7 @@ from app.models import (
 
 
 @pytest.fixture
-def pjp_financial_year():
+def example_financial_year():
     fy = FinancialYear(
         opening_retained_income=138178,
         opening_share_capital=1000,
@@ -68,7 +68,7 @@ def pjp_financial_year():
 
     fy.shareholder_loans = [
         ShareholderLoan(
-            shareholder_name="Paulo Jorge Nunes Goncalves", direction="To",
+            shareholder_name="J. Sample", direction="To",
             opening_balance=146518, advances=18107, repayments=0,
             interest_rate_pa=0.0775, interest_charged=11841,
             secured_or_unsecured="Unsecured", repayment_terms="No fixed terms of repayment have been set",

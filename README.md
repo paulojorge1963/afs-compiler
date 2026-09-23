@@ -23,7 +23,7 @@ the app at http://127.0.0.1:8420.
 ## Getting started
 
 1. Fill in `AFS-Compiler-Input-Template.xlsx` (the companion workbook) for an entity's
-   financial year, or use the worked Paulo Jorge Photography FY2026 example as-is.
+   financial year, or use the worked Example Photography Studio FY2026 example as-is.
 2. Open the app and go to **Import Workbook**. Every sheet is parsed into the database.
 3. Open the financial year and check the **Validation** tab - every check must tie to
    zero before you can generate the document.
@@ -42,7 +42,7 @@ source .venv/bin/activate
 python -m pytest tests/ -v
 ```
 
-The calc-engine tests use the Paulo Jorge Photography FY2026 figures as fixtures and
+The calc-engine tests use the Example Photography Studio FY2026 figures as fixtures and
 assert every cross-check in the workbook's Validation Summary sheet ties to zero,
 independently of document generation.
 
