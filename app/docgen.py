@@ -16,6 +16,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, Cm, RGBColor
 
+from app.calc import _dir as normalize_direction
 from app.models import ReportType
 from app.reporting import ReportData, applicable_policies
 
@@ -883,7 +884,7 @@ def build_note_loans(doc, report: ReportData):
 
     total_c = total_p = 0.0
     for loan in report.fy.shareholder_loans:
-        sign = 1 if loan.direction.value == "To" else -1
+        sign = 1 if normalize_direction(loan.direction) == "To" else -1
         row = table.add_row()
         _cell_text(row.cells[0], loan.shareholder_name, size=10)
         _cell_text(row.cells[1], fmt(sign * loan.closing_balance), align=WD_ALIGN_PARAGRAPH.RIGHT, size=10)
@@ -910,7 +911,7 @@ def build_note_loans(doc, report: ReportData):
         rate_text = "interest-free" if not loan.interest_rate_pa else f"at {loan.interest_rate_pa * 100:.2f}% per annum"
         add_body_paragraph(
             doc,
-            f"The loan {'to' if loan.direction.value == 'To' else 'from'} {loan.shareholder_name} is "
+            f"The loan {'to' if normalize_direction(loan.direction) == 'To' else 'from'} {loan.shareholder_name} is "
             f"{loan.secured_or_unsecured.lower()}, {rate_text}, and {loan.repayment_terms or 'has no fixed terms of repayment'}. "
             "This loan account is disclosed as a related party transaction in terms of Section 33 of the IFRS "
             "for SME's, as the shareholder/director is a related party of the company.",
