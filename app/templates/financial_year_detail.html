@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.company_name }} FY{{ fy.year_end_date.year }} - AFS Compiler{% endblock %}
+{% block content %}
+<p><a href="/entities/{{ entity.id }}/edit">&larr; {{ entity.company_name }}</a></p>
+<h1>Financial year ended {{ fy.year_end_date }}</h1>
+
+<div class="banner warn">FOR REVIEW BEFORE ISSUE - this pack is a compilation aid, not a substitute for your
+accounting practitioner's review before it is issued.</div>
+
+{% if fy.year_end_date.year >= 2027 and fy.ifrs_edition.value.startswith('Second') %}
+<div class="banner warn">This year begins on or after 1 January 2027 - the IFRS for SME's Third Edition (2025)
+becomes mandatory from then. Consider switching the edition below (early adoption is otherwise optional).</div>
+{% endif %}
+
+{% if error %}<div class="banner fail">Could not compute a preview: {{ error }}</div>{% endif %}
+
+{% if report %}
+<div class="banner {{ 'ok' if report.is_valid else 'fail' }}">
+  {% if report.is_valid %}All validation checks tie to zero. Ready to generate.
+  {% else %}Validation checks are failing - see the Validation tab. Document generation is blocked until these tie out.{% endif %}
+</div>
+{% endif %}
+
+<div class="tabs">
+  <a href="#basics" data-tab="basics">Basics</a>
+  <a href="#trial-balance" data-tab="trial-balance">Trial Balance</a>
+  <a href="#ppe" data-tab="ppe">PPE Register</a>
+  <a href="#loans" data-tab="loans">Loans</a>
+  <a href="#tax" data-tab="tax">Tax Computation</a>
+  <a href="#policies" data-tab="policies">Policy Elections</a>
+  <a href="#validation" data-tab="validation">Validation</a>
+  <a href="#generate" data-tab="generate">Generate</a>
+</div>
+
+<div class="tab-panel" data-panel="basics">
+  <form method="post" action="/years/{{ fy.id }}/scalars">
+    <label class="field"><span>Financial Year End (current year)</span><input type="date" name="year_end_date" required value="{{ fy.year_end_date }}"></label>
+    <label class="field"><span>Financial Year End (prior/comparative year)</span><input type="date" name="comparative_year_end_date" value="{{ fy.comparative_year_end_date or '' }}"></label>
+    <label class="field"><span>Date Annual Financial Statements Approved</span><input type="date" name="date_approved" value="{{ fy.date_approved or '' }}"></label>
+    <label class="field"><span>IFRS for SME's Edition Applied</span>
+      <select name="ifrs_edition">
+        {% for ed in ifrs_editions %}
+        <option value="{{ ed.value }}" {% if fy.ifrs_edition == ed %}selected{% endif %}>{{ ed.value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <h3>Opening balances (start of the comparative/prior year)</h3>
+    <label class="field"><span>Retained Income - Opening Balance</span><input type="number" step="0.01" name="opening_retained_income" value="{{ fy.opening_retained_income }}"></label>
+    <label class="field"><span>Share Capital - Opening Balance</span><input type="number" step="0.01" name="opening_share_capital" value="{{ fy.opening_share_capital }}"></label>
+    <label class="field"><span>Cash and Cash Equivalents - Opening Balance</span><input type="number" step="0.01" name="opening_cash" value="{{ fy.opening_cash }}"></label>
+    <label class="field"><span>Prior Year Depreciation Charge (total, all asset classes)</span><input type="number" step="0.01" name="prior_year_depreciation_charge" value="{{ fy.prior_year_depreciation_charge }}"></label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  <form method="post" action="/years/{{ fy.id }}/delete" onsubmit="return confirm('Delete this financial year? This cannot be undone.');" style="margin-top:16px;">
+    <button class="btn danger" type="submit">Delete this financial year</button>
+  </form>
+</div>
+
+<div class="tab-panel" data-panel="trial-balance" style="display:none;">
+  <form method="post" action="/years/{{ fy.id }}/trial-balance">
+    <div class="table-scroll">
+    <table class="grid" id="tb-table">
+      <thead><tr><th>Account Name</th><th>AFS Category</th><th>Current Year</th><th>Prior Year</th><th>Notes</th><th></th></tr></thead>
+      <tbody>
+        {% for l in fy.trial_balance_lines %}
+        <tr>
+          <td><input name="tb_account_name" value="{{ l.account_name }}"></td>
+          <td><select name="tb_afs_category">
+            {% for c in afs_categories %}<option value="{{ c.value }}" {% if l.afs_category==c %}selected{% endif %}>{{ c.value }}</option>{% endfor %}
+          </select></td>
+          <td><input type="number" step="0.01" class="numeric" name="tb_current_year_amount" value="{{ l.current_year_amount }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="tb_prior_year_amount" value="{{ l.prior_year_amount }}"></td>
+          <td><input name="tb_notes" value="{{ l.notes or '' }}"></td>
+          <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button type="button" class="btn small secondary" onclick="addRow('tb-table','tb-row-template')">+ Add line</button>
+    <template id="tb-row-template"><tr>
+      <td><input name="tb_account_name"></td>
+      <td><select name="tb_afs_category">{% for c in afs_categories %}<option value="{{ c.value }}">{{ c.value }}</option>{% endfor %}</select></td>
+      <td><input type="number" step="0.01" class="numeric" name="tb_current_year_amount" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="tb_prior_year_amount" value="0"></td>
+      <td><input name="tb_notes"></td>
+      <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+    </tr></template>
+    <p><em>Depreciation is not entered here - it is sourced from the PPE Register.</em></p>
+    <button class="btn" type="submit">Save trial balance</button>
+  </form>
+</div>
+
+<div class="tab-panel" data-panel="ppe" style="display:none;">
+  <form method="post" action="/years/{{ fy.id }}/ppe">
+    <div class="table-scroll">
+    <table class="grid" id="ppe-table">
+      <thead><tr><th>Asset Category</th><th>Depr. Method</th><th>Useful Life (yrs)</th><th>Opening Cost</th><th>Additions</th><th>Disposals - Cost</th><th>Opening Accum. Depr.</th><th>Depr. Charge</th><th>Accum. Depr. on Disposals</th><th></th></tr></thead>
+      <tbody>
+        {% for a in fy.ppe_assets %}
+        <tr>
+          <td><input name="ppe_asset_category" value="{{ a.asset_category }}"></td>
+          <td><input name="ppe_depreciation_method" value="{{ a.depreciation_method }}"></td>
+          <td><input type="number" step="0.1" class="numeric" name="ppe_useful_life_years" value="{{ a.useful_life_years }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="ppe_opening_cost" value="{{ a.opening_cost }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="ppe_additions" value="{{ a.additions }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="ppe_disposals_cost" value="{{ a.disposals_cost }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="ppe_opening_accumulated_depreciation" value="{{ a.opening_accumulated_depreciation }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="ppe_depreciation_charge" value="{{ a.depreciation_charge }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="ppe_accumulated_depreciation_on_disposals" value="{{ a.accumulated_depreciation_on_disposals }}"></td>
+          <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button type="button" class="btn small secondary" onclick="addRow('ppe-table','ppe-row-template')">+ Add asset class</button>
+    <template id="ppe-row-template"><tr>
+      <td><input name="ppe_asset_category"></td>
+      <td><input name="ppe_depreciation_method" value="Straight line"></td>
+      <td><input type="number" step="0.1" class="numeric" name="ppe_useful_life_years" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="ppe_opening_cost" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="ppe_additions" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="ppe_disposals_cost" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="ppe_opening_accumulated_depreciation" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="ppe_depreciation_charge" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="ppe_accumulated_depreciation_on_disposals" value="0"></td>
+      <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+    </tr></template>
+    <button class="btn" type="submit">Save PPE register</button>
+  </form>
+</div>
+
+<div class="tab-panel" data-panel="loans" style="display:none;">
+  <form method="post" action="/years/{{ fy.id }}/loans">
+    <div class="table-scroll">
+    <table class="grid" id="loans-table">
+      <thead><tr><th>Shareholder/Director</th><th>Direction</th><th>Opening Balance</th><th>Advances</th><th>Repayments</th><th>Interest Rate % p.a.</th><th>Interest Charged</th><th>Secured/Unsecured</th><th>Repayment Terms</th><th></th></tr></thead>
+      <tbody>
+        {% for l in fy.shareholder_loans %}
+        <tr>
+          <td><input name="loan_shareholder_name" value="{{ l.shareholder_name }}"></td>
+          <td><select name="loan_direction">{% for d in loan_directions %}<option value="{{ d.value }}" {% if l.direction==d %}selected{% endif %}>{{ d.value }}</option>{% endfor %}</select></td>
+          <td><input type="number" step="0.01" class="numeric" name="loan_opening_balance" value="{{ l.opening_balance }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="loan_advances" value="{{ l.advances }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="loan_repayments" value="{{ l.repayments }}"></td>
+          <td><input type="number" step="0.0001" class="numeric" name="loan_interest_rate_pa" value="{{ l.interest_rate_pa }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="loan_interest_charged" value="{{ l.interest_charged }}"></td>
+          <td><input name="loan_secured_or_unsecured" value="{{ l.secured_or_unsecured }}"></td>
+          <td><input name="loan_repayment_terms" value="{{ l.repayment_terms or '' }}"></td>
+          <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button type="button" class="btn small secondary" onclick="addRow('loans-table','loan-row-template')">+ Add loan account</button>
+    <template id="loan-row-template"><tr>
+      <td><input name="loan_shareholder_name"></td>
+      <td><select name="loan_direction">{% for d in loan_directions %}<option value="{{ d.value }}">{{ d.value }}</option>{% endfor %}</select></td>
+      <td><input type="number" step="0.01" class="numeric" name="loan_opening_balance" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="loan_advances" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="loan_repayments" value="0"></td>
+      <td><input type="number" step="0.0001" class="numeric" name="loan_interest_rate_pa" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="loan_interest_charged" value="0"></td>
+      <td><input name="loan_secured_or_unsecured" value="Unsecured"></td>
+      <td><input name="loan_repayment_terms"></td>
+      <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+    </tr></template>
+    <button class="btn" type="submit">Save loans</button>
+  </form>
+</div>
+
+<div class="tab-panel" data-panel="tax" style="display:none;">
+  <form method="post" action="/years/{{ fy.id }}/tax">
+    <label class="field"><span>Assessed Loss Brought Forward</span>
+      <input type="number" step="0.01" name="assessed_loss_brought_forward" value="{{ fy.tax_computation_meta.assessed_loss_brought_forward if fy.tax_computation_meta else 0 }}">
+    </label>
+
+    <h3>Temporary differences</h3>
+    <div class="table-scroll">
+    <table class="grid" id="td-table">
+      <thead><tr><th>Description</th><th>Amount</th><th></th></tr></thead>
+      <tbody>
+        {% for td in fy.tax_differences %}
+        <tr>
+          <td><input name="td_description" value="{{ td.description }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="td_amount" value="{{ td.amount }}"></td>
+          <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button type="button" class="btn small secondary" onclick="addRow('td-table','td-row-template')">+ Add difference</button>
+    <template id="td-row-template"><tr>
+      <td><input name="td_description"></td>
+      <td><input type="number" step="0.01" class="numeric" name="td_amount" value="0"></td>
+      <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+    </tr></template>
+
+    <h3>Tax bracket table</h3>
+    <p><em>SARS revises Small Business Corporation brackets annually - check the current published rates before
+    relying on this output.</em></p>
+    <div class="table-scroll">
+    <table class="grid" id="bracket-table">
+      <thead><tr><th>Lower Limit</th><th>Upper Limit (blank = open-ended)</th><th>Rate (e.g. 0.07 = 7%)</th><th></th></tr></thead>
+      <tbody>
+        {% for b in fy.tax_brackets %}
+        <tr>
+          <td><input type="number" step="0.01" class="numeric" name="tb_lower_limit" value="{{ b.lower_limit }}"></td>
+          <td><input type="number" step="0.01" class="numeric" name="tb_upper_limit" value="{{ b.upper_limit if b.upper_limit is not none else '' }}"></td>
+          <td><input type="number" step="0.0001" class="numeric" name="tb_rate" value="{{ b.rate }}"></td>
+          <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button type="button" class="btn small secondary" onclick="addRow('bracket-table','bracket-row-template')">+ Add bracket</button>
+    <template id="bracket-row-template"><tr>
+      <td><input type="number" step="0.01" class="numeric" name="tb_lower_limit" value="0"></td>
+      <td><input type="number" step="0.01" class="numeric" name="tb_upper_limit"></td>
+      <td><input type="number" step="0.0001" class="numeric" name="tb_rate" value="0"></td>
+      <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+    </tr></template>
+
+    <button class="btn" type="submit">Save tax computation</button>
+  </form>
+</div>
+
+<div class="tab-panel" data-panel="policies" style="display:none;">
+  <form method="post" action="/years/{{ fy.id }}/policies">
+    <div class="table-scroll">
+    <table class="grid">
+      <thead><tr><th>Applicable?</th><th>Policy Area</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for pe in fy.policy_elections %}
+        <tr>
+          <td style="text-align:center"><input type="checkbox" name="policy_applicable" value="{{ pe.policy_area }}" {% if pe.applicable %}checked{% endif %}></td>
+          <td><input type="hidden" name="policy_area" value="{{ pe.policy_area }}">{{ pe.policy_area }}</td>
+          <td><input name="policy_notes" value="{{ pe.notes or '' }}"></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <button class="btn" type="submit">Save policy elections</button>
+  </form>
+</div>
+
+<div class="tab-panel" data-panel="validation" style="display:none;">
+  {% if report %}
+  <div class="table-scroll">
+  <table class="grid">
+    <thead><tr><th>Check</th><th>A</th><th>B</th><th>Difference</th><th></th></tr></thead>
+    <tbody>
+      {% for v in report.validations %}
+      <tr>
+        <td>{{ v.name }}</td>
+        <td class="numcol">{{ v.value_a | rand }}</td>
+        <td class="numcol">{{ v.value_b | rand }}</td>
+        <td class="numcol">{{ v.difference | rand }}</td>
+        <td>{% if v.ok %}<span class="badge ok">OK</span>{% else %}<span class="badge fail">FAILS</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p>Could not run validation: {{ error }}</p>
+  {% endif %}
+</div>
+
+<div class="tab-panel" data-panel="generate" style="display:none;">
+  <div class="card">
+    <h3>Generate AFS pack</h3>
+    {% if report and report.is_valid %}
+    <p><a class="btn" href="/years/{{ fy.id }}/generate">Download .docx</a></p>
+    {% else %}
+    <p><em>Fix the failing validation checks before generating the document.</em></p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>Roll forward</h3>
+    <p>Creates next year with this year's closing balances as opening balances.</p>
+    <form method="post" action="/years/{{ fy.id }}/roll-forward">
+      <button class="btn secondary" type="submit" {% if not report or not report.is_valid %}disabled{% endif %}>Create Next Year</button>
+    </form>
+  </div>
+  <div class="card">
+    <h3>Export workbook</h3>
+    <p>Download this year's data back into the input-template workbook layout.</p>
+    <a class="btn secondary" href="/years/{{ fy.id }}/export-workbook">Download workbook</a>
+  </div>
+</div>
+{% endblock %}

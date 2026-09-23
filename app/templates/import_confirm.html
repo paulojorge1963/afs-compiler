@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Confirm Overwrite - AFS Compiler{% endblock %}
+{% block content %}
+<h1>Confirm overwrite</h1>
+<div class="banner warn">
+  {{ entity.company_name }} already has a financial year ending {{ identity.year_end_date }} in the app.
+  Importing this workbook will <strong>overwrite</strong> that year's trial balance, PPE register, loans, tax
+  computation and policy elections. This cannot be undone.
+</div>
+<form method="post" action="/import/confirm">
+  <input type="hidden" name="token" value="{{ token }}">
+  <input type="hidden" name="entity_id" value="{{ entity.id }}">
+  <button class="btn danger" type="submit">Overwrite and import</button>
+  <a class="btn secondary" href="/import">Cancel</a>
+</form>
+{% endblock %}

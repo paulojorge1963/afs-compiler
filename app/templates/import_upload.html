@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Import Workbook - AFS Compiler{% endblock %}
+{% block content %}
+<h1>Import Workbook</h1>
+{% if error %}<div class="banner fail">{{ error }}</div>{% endif %}
+<div class="card">
+  <p>Upload a filled-in "AFS Compiler Input Template" workbook. If it matches an existing entity and financial
+  year already in the app, you'll be asked to confirm before it overwrites that year's data.</p>
+  <form method="post" action="/import" enctype="multipart/form-data">
+    <label class="field"><span>Attach to entity (optional - leave blank to match/create by registration number)</span>
+      <select name="entity_id">
+        <option value="">- match by registration number / create new -</option>
+        {% for e in entities %}
+        <option value="{{ e.id }}">{{ e.company_name }} ({{ e.registration_number }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="field"><span>Workbook (.xlsx)</span><input type="file" name="file" accept=".xlsx" required></label>
+    <button class="btn" type="submit">Import</button>
+  </form>
+</div>
+{% endblock %}

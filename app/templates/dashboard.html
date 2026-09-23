@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Entities - AFS Compiler{% endblock %}
+{% block content %}
+<h1>Entities</h1>
+<p><a class="btn" href="/entities/new">+ New Entity</a></p>
+
+{% for row in rows %}
+<div class="card">
+  <h2>{{ row.entity.company_name }} <small style="color:#667;">({{ row.entity.registration_number }})</small></h2>
+  <p>
+    <a class="btn small secondary" href="/entities/{{ row.entity.id }}/edit">Edit entity</a>
+    <a class="btn small secondary" href="/entities/{{ row.entity.id }}/years/new">+ New financial year</a>
+  </p>
+  {% if row.years %}
+  <div class="table-scroll">
+  <table class="grid">
+    <tr><th>Year ended</th><th>Comparative</th><th>Validation</th><th></th></tr>
+    {% for y in row.years %}
+    <tr>
+      <td>{{ y.fy.year_end_date }}</td>
+      <td>{{ y.fy.comparative_year_end_date or "-" }}</td>
+      <td>
+        {% if y.valid %}
+          <span class="badge ok">Passes validation</span>
+        {% else %}
+          <span class="badge fail">Needs attention</span>
+        {% endif %}
+      </td>
+      <td><a class="btn small" href="/years/{{ y.fy.id }}">Open</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% else %}
+  <p><em>No financial years yet.</em></p>
+  {% endif %}
+</div>
+{% else %}
+<p><em>No entities yet - create one, or import a companion workbook.</em></p>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if entity else "New" }} Entity - AFS Compiler{% endblock %}
+{% block content %}
+<h1>{{ "Edit" if entity else "New" }} Entity</h1>
+
+<form method="post" action="{{ '/entities/' ~ entity.id ~ '/edit' if entity else '/entities/new' }}">
+  <div class="card">
+    <h2>Company details</h2>
+    <label class="field"><span>Company Name</span><input name="company_name" required value="{{ entity.company_name if entity else '' }}"></label>
+    <label class="field"><span>Registration Number</span><input name="registration_number" required value="{{ entity.registration_number if entity else '' }}"></label>
+    <label class="field"><span>Tax Reference Number</span><input name="tax_reference_number" value="{{ entity.tax_reference_number if entity else '' }}"></label>
+    <label class="field"><span>VAT Number (if registered)</span><input name="vat_number" value="{{ entity.vat_number if entity else '' }}"></label>
+    <label class="field"><span>Country of Incorporation and Domicile</span><input name="country_of_incorporation" value="{{ entity.country_of_incorporation if entity else 'South Africa' }}"></label>
+    <label class="field"><span>Nature of Business and Principal Activities</span><input name="nature_of_business" value="{{ entity.nature_of_business if entity else '' }}"></label>
+    <label class="field"><span>Registered Office Address</span><textarea name="registered_office_address" rows="2">{{ entity.registered_office_address if entity else '' }}</textarea></label>
+    <label class="field"><span>Business Address</span><textarea name="business_address" rows="2">{{ entity.business_address if entity else '' }}</textarea></label>
+    <label class="field"><span>Postal Address</span><textarea name="postal_address" rows="2">{{ entity.postal_address if entity else '' }}</textarea></label>
+    <label class="field"><span>Bankers</span><input name="bankers" value="{{ entity.bankers if entity else '' }}"></label>
+    <label class="field"><span>Incorporation Date</span><input type="date" name="incorporation_date" value="{{ entity.incorporation_date if entity else '' }}"></label>
+    <label class="field"><span>Certificate to Commence Business Date</span><input type="date" name="certificate_to_commence_business_date" value="{{ entity.certificate_to_commence_business_date if entity else '' }}"></label>
+  </div>
+
+  <div class="card">
+    <h2>Practitioner / compiler</h2>
+    <label class="field"><span>Practitioner Name</span><input name="practitioner_name" value="{{ entity.practitioner_name if entity else '' }}"></label>
+    <label class="field"><span>Practitioner Firm</span><input name="practitioner_firm" value="{{ entity.practitioner_firm if entity else '' }}"></label>
+    <label class="field"><span>Report Type</span>
+      <select name="report_type">
+        {% for rt in report_types %}
+        <option value="{{ rt.value }}" {% if entity and entity.report_type == rt %}selected{% endif %}>{{ rt.value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="field"><input type="checkbox" name="is_sbc" {% if not entity or entity.is_sbc %}checked{% endif %}> Company Qualifies as a Small Business Corporation (SBC) for tax</label>
+  </div>
+
+  <div class="card">
+    <h2>Directors</h2>
+    <div class="table-scroll">
+    <table class="grid" id="directors-table">
+      <thead><tr><th>Full Name</th><th>Nationality</th><th>Date Appointed</th><th>Date Resigned</th><th>Signs Approval?</th><th></th></tr></thead>
+      <tbody>
+        {% if entity %}
+        {% for d in entity.directors %}
+        <tr>
+          <td><input name="director_full_name" value="{{ d.full_name }}"></td>
+          <td><input name="director_nationality" value="{{ d.nationality or '' }}"></td>
+          <td><input type="date" name="director_date_appointed" value="{{ d.date_appointed or '' }}"></td>
+          <td><input type="date" name="director_date_resigned" value="{{ d.date_resigned or '' }}"></td>
+          <td style="text-align:center"><input type="checkbox" name="director_signs_approval" data-row-index value="{{ loop.index0 }}" {% if d.signs_approval %}checked{% endif %}></td>
+          <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+        </tr>
+        {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+    </div>
+    <button type="button" class="btn small secondary" onclick="addRow('directors-table','director-row-template')">+ Add director</button>
+    <template id="director-row-template">
+      <tr>
+        <td><input name="director_full_name"></td>
+        <td><input name="director_nationality"></td>
+        <td><input type="date" name="director_date_appointed"></td>
+        <td><input type="date" name="director_date_resigned"></td>
+        <td style="text-align:center"><input type="checkbox" name="director_signs_approval" data-row-index checked></td>
+        <td class="row-actions"><button type="button" class="btn small danger" onclick="removeRow(this)">&times;</button></td>
+      </tr>
+    </template>
+  </div>
+
+  <button class="btn" type="submit">Save</button>
+  {% if entity %}<a class="btn secondary" href="/">Back to dashboard</a>{% endif %}
+</form>
+
+{% if entity %}
+<form method="post" action="/entities/{{ entity.id }}/delete" onsubmit="return confirm('Delete this entity and all its financial years? This cannot be undone.');" style="margin-top:20px;">
+  <button class="btn danger" type="submit">Delete entity</button>
+</form>
+{% endif %}
+{% endblock %}
